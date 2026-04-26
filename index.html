@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Håst a ball</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        :root {
+            --bg-dark: #0a0a1a;
+            --bg-light: #1a0b2e;
+            --neon-blue: #00f3ff;
+            --neon-purple: #bc13fe;
+            --gold: #ffd700;
+            --red: #ff3366;
+            --green: #00ff66;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-light) 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background-image: url('IMG_1838.jpeg');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15; /* Snyggt nedtonad */
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- Start Screen --- */
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 20px;
+            background: radial-gradient(circle at center, rgba(188, 19, 254, 0.15) 0%, transparent 70%);
+        }
+
+        h1.title {
+            font-size: 5rem;
+            text-transform: uppercase;
+            font-weight: 900;
+            background: linear-gradient(to right, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(188, 19, 254, 0.4);
+            margin-bottom: 2rem;
+            letter-spacing: 4px;
+        }
+
+        .start-image {
+            max-width: 100%;
+            width: 500px;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.2);
+            margin-bottom: 3rem;
+            border: 2px solid rgba(0, 243, 255, 0.2);
+            object-fit: cover;
+        }
+
+        .btn {
+            background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 243, 255, 0.6);
+        }
+
+        /* --- Layout & Side Panels --- */
+        #game-layout {
+            display: none;
+            justify-content: center;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+            flex-grow: 1;
+        }
+
+        .side-panel {
+            width: 350px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 20px 10px;
+            align-content: start;
+            overflow-y: hidden;
+        }
+
+        .side-panel::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 1100px) {
+            .side-panel {
+                display: none;
+            }
+        }
+
+        .name-badge {
+            background: rgba(255,255,255,0.05);
+            padding: 6px 4px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .name-badge.guessed {
+            text-decoration: line-through;
+            opacity: 0.3;
+            background: rgba(0,0,0,0.5);
+            border-color: transparent;
+        }
+
+        /* --- Game Screen --- */
+        #game-screen {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 120px; /* space for sticky input */
+            max-width: 800px;
+            margin: 0 20px;
+            width: 100%;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: center;
+            padding: 15px 0 25px 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: linear-gradient(to bottom, var(--bg-dark) 80%, transparent);
+        }
+
+        .lives-container {
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 12px 25px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 51, 102, 0.4);
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .heart {
+            color: var(--red);
+            font-size: 1.8rem;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 0 5px rgba(255, 51, 102, 0.5));
+        }
+
+        .heart.broken {
+            animation: breakHeart 0.6s forwards;
+        }
+
+        @keyframes breakHeart {
+            0% { transform: scale(1); opacity: 1; }
+            40% { transform: scale(1.4) rotate(-20deg); opacity: 0.8; filter: drop-shadow(0 0 15px var(--red)); }
+            100% { transform: scale(0) translateY(30px); opacity: 0; }
+        }
+
+        /* --- Scoreboard --- */
+        .scoreboard {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+            flex-grow: 1;
+        }
+
+        .slot {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            height: 38px;
+            padding: 0 15px;
+            position: relative;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.6);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .slot .rank {
+            width: 35px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 1.1rem;
+        }
+
+        .slot .name {
+            flex-grow: 1;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: transparent; /* hidden initially */
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .slot .count {
+            font-weight: 900;
+            color: transparent;
+            font-size: 1.1rem;
+            background: rgba(0,0,0,0.4);
+            padding: 2px 10px;
+            border-radius: 12px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* Revealed correct slot */
+        .slot.correct {
+            background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), rgba(188, 19, 254, 0.15));
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2), inset 0 0 15px rgba(0, 243, 255, 0.15);
+            transform: scale(1.02);
+        }
+
+        .slot.correct .rank {
+            color: var(--gold);
+            text-shadow: 0 0 10px var(--gold);
+        }
+
+        .slot.correct .name {
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255,255,255,0.5);
+        }
+
+        .slot.correct .count {
+            color: var(--neon-blue);
+            text-shadow: 0 0 8px var(--neon-blue);
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+        }
+
+        /* Missed slot (game over) */
+        .slot.missed {
+            background: rgba(255, 51, 102, 0.1);
+            border-color: var(--red);
+        }
+        .slot.missed .name, .slot.missed .count {
+            color: var(--red);
+            text-shadow: 0 0 5px rgba(255, 51, 102, 0.5);
+        }
+        .slot.missed .count {
+            border: 1px solid rgba(255, 51, 102, 0.3);
+        }
+
+        /* --- Input Area --- */
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 25px 20px;
+            background: linear-gradient(to top, var(--bg-dark) 80%, transparent);
+            display: flex;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .input-container {
+            display: flex;
+            width: 100%;
+            max-width: 700px;
+            gap: 15px;
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(15px);
+            position: relative;
+        }
+
+        .input-container input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 10px 25px;
+            outline: none;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-container input::placeholder {
+            color: rgba(255,255,255,0.3);
+            text-transform: none;
+            font-weight: normal;
+        }
+
+        .input-container button {
+            background: var(--neon-blue);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 40px;
+            padding: 0 35px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+        }
+
+        .input-container button:hover:not(:disabled) {
+            background: #fff;
+            box-shadow: 0 0 25px #fff;
+            transform: scale(1.05);
+        }
+        
+        .input-container button:disabled {
+            background: #333;
+            color: #666;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* --- Animations --- */
+        .animating-guess {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px); /* Account for padding */
+            max-width: 760px;
+            height: 38px;
+            background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: 900;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.6);
+            transition: top 0.3s ease-in-out, width 0.3s ease-in-out, background 0.2s, box-shadow 0.2s;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        @keyframes blinkGreen {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(0, 255, 102, 0.3); box-shadow: 0 0 40px var(--green); transform: scale(1.05); }
+        }
+
+        @keyframes blinkRed {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(255, 51, 102, 0.3); box-shadow: 0 0 40px var(--red); transform: scale(0.98); }
+        }
+
+        .flash-green {
+            animation: blinkGreen 0.7s ease-out;
+        }
+        
+        .red-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s;
+            mix-blend-mode: overlay;
+        }
+        
+        .red-overlay.active {
+            opacity: 1;
+            animation: flashOverlay 0.6s ease-out;
+        }
+        
+        @keyframes flashOverlay {
+            0% { opacity: 0; }
+            30% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* --- Overlays --- */
+        .overlay-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 26, 0.85);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .overlay-screen h2 {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 4px;
+        }
+
+        #win-overlay h2 {
+            background: linear-gradient(to right, #fff, var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 243, 255, 0.5);
+        }
+
+        #game-over-overlay h2 {
+            background: linear-gradient(to right, #fff, var(--red));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 51, 102, 0.5);
+        }
+
+        canvas#confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+            display: none;
+        }
+        
+        #error-msg {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--red);
+            font-weight: 900;
+            font-size: 1rem;
+            opacity: 0;
+            transition: all 0.3s;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.8);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid var(--red);
+            box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        #error-msg.visible {
+            opacity: 1;
+            top: -45px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="red-overlay" id="red-overlay"></div>
+    <canvas id="confetti"></canvas>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1 class="title">Håst a ball</h1>
+        <!-- Placeholder image as requested -->
+        <img src="startelvan.png" alt="Gänget på fotbollsplan" class="start-image">
+        <button class="btn" id="start-btn">Starta Spelet</button>
+    </div>
+
+    <!-- Game Screen Layout -->
+    <div id="game-layout">
+        <!-- Left Names -->
+        <div class="side-panel" id="left-panel"></div>
+
+        <!-- Main Game -->
+        <div id="game-screen">
+            <div class="header">
+                <div class="lives-container" id="lives-container">
+                    <!-- Hearts generated by JS -->
+                </div>
+            </div>
+
+            <div class="scoreboard" id="scoreboard">
+                <!-- Slots generated by JS -->
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <div id="error-msg">Redan gissad!</div>
+                    <input type="text" id="guess-input" list="names-list" placeholder="Skriv ett namn..." autocomplete="off">
+                    <datalist id="names-list">
+                        <!-- Options generated by JS -->
+                    </datalist>
+                    <button id="guess-btn">Gissa</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Names -->
+        <div class="side-panel" id="right-panel"></div>
+    </div>
+
+    <!-- Win Overlay -->
+    <div id="win-overlay" class="overlay-screen">
+        <h2>JIPPIE!</h2>
+        <img src="connor.png" alt="Connor" style="max-height: 400px; max-width: 90%; border-radius: 20px; box-shadow: 0 0 50px rgba(0, 243, 255, 0.5); margin-bottom: 30px;">
+        <button class="btn restart-btn" onclick="location.reload()">Spela Igen</button>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay" class="overlay-screen">
+        <h2 style="color: var(--red); text-shadow: 0 0 30px var(--red);">ÄEEEee</h2>
+        <img src="jarpan.png" alt="ÄEEEee" style="max-height: 400px; max-width: 90%; border-radius: 20px; box-shadow: 0 0 50px rgba(255, 51, 102, 0.5); margin-bottom: 30px;">
+        <button class="btn restart-btn" onclick="location.reload()">Försök Igen</button>
+    </div>
+
+    <script>
+        // --- Data ---
+        const top15 = [
+            {"name": "jesper R", "count": 81},
+            {"name": "ashwini", "count": 45},
+            {"name": "anna", "count": 43},
+            {"name": "huli", "count": 40},
+            {"name": "maja h", "count": 31},
+            {"name": "sara", "count": 29},
+            {"name": "minna mannheimer", "count": 29},
+            {"name": "lillaxel", "count": 27},
+            {"name": "hilma", "count": 25},
+            {"name": "amanda", "count": 24},
+            {"name": "annabell", "count": 23},
+            {"name": "David", "count": 22},
+            {"name": "COnnor", "count": 20},
+            {"name": "EMY", "count": 17},
+            {"name": "isak joo", "count": 17}
+        ];
+
+        const otherNames = [
+            "jesper kompis axel", "nora", "hedda MÅNSSON", "albert", "atle",
+            "empanada", "borås", "JENNY & EMY KOMPIS", "freddie", "gson",
+            "rascal", "rosengren", "kimpa", "Ebba persson", "hedda", "dennis",
+            "pontus strul", "sara härdling", "coach", "tilda", "scooner scorer",
+            "hannas marie", "KLUDGE", "ted", "heddas TIM", "jakobs kompis asiat",
+            "otto", "otti", "räkan", "Sigrid Julia", "oliva andersson", "kristine",
+            "matilda sele", "lantställe ellen", "rizznus", "jakob krulligt",
+            "jakobs kompis asiat keps", "Axel andersson", "anderek", "normell",
+            "joel göteborg", "daphne", "tq", "klara G", "Georgs karl", "lampish",
+            "zackrisson", "ellen wadens storasyster", "heddas kompis ingrid",
+            "dejtbänken", "Isaks Lisa", "elin hansson", "1000 sexfrågor", "celine",
+            "Alvar", "Wemle", "alma", "frida", "harry", "Omar", "ruben", "tim",
+            "lommas tjej", "molly", "kalle", "ACKE!", "Au pair killen", "arvid",
+            "Thea", "luddes isak", "COSMOpolitan", "gymnastik DJ", "stannervik"
+        ];
+
+        // Combine all names, convert to uppercase for consistency in datalist, remove duplicates, and sort
+        const allNames = [...new Set([
+            ...top15.map(n => n.name.toUpperCase()), 
+            ...otherNames.map(n => n.toUpperCase())
+        ])].sort();
+
+        // --- State ---
+        let lives = 10;
+        let correctGuesses = 0;
+        let guessedNames = []; // store in uppercase
+
+        // --- Elements ---
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const startBtn = document.getElementById('start-btn');
+        const livesContainer = document.getElementById('lives-container');
+        const scoreboard = document.getElementById('scoreboard');
+        const datalist = document.getElementById('names-list');
+        const guessInput = document.getElementById('guess-input');
+        const guessBtn = document.getElementById('guess-btn');
+        const errorMsg = document.getElementById('error-msg');
+        const redOverlay = document.getElementById('red-overlay');
+
+        // --- Initialization ---
+        function initGame() {
+            // Populate datalist
+            allNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                datalist.appendChild(option);
+            });
+
+            // Create hearts
+            for (let i = 0; i < lives; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'heart';
+                heart.innerHTML = '❤️';
+                livesContainer.appendChild(heart);
+            }
+
+            // Create scoreboard slots
+            top15.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'slot';
+                slot.id = `slot-${index}`;
+                
+                slot.innerHTML = `
+                    <span class="rank">${index + 1}</span>
+                    <span class="name">???</span>
+                    <span class="count">-</span>
+                `;
+                scoreboard.appendChild(slot);
+            });
+
+            // Distribute allNames to side panels
+            const leftPanel = document.getElementById('left-panel');
+            const rightPanel = document.getElementById('right-panel');
+            const halfLength = Math.ceil(allNames.length / 2);
+            
+            allNames.forEach((name, index) => {
+                const badge = document.createElement('div');
+                badge.className = 'name-badge';
+                badge.dataset.name = name;
+                badge.textContent = name;
+                
+                if (index < halfLength) {
+                    leftPanel.appendChild(badge);
+                } else {
+                    rightPanel.appendChild(badge);
+                }
+            });
+
+            // Event Listeners
+            startBtn.addEventListener('click', () => {
+                startScreen.style.display = 'none';
+                document.getElementById('game-layout').style.display = 'flex';
+                // Small timeout to allow transition before focus
+                setTimeout(() => guessInput.focus(), 100);
+            });
+
+            guessBtn.addEventListener('click', handleGuess);
+            guessInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleGuess();
+            });
+            guessInput.addEventListener('input', () => {
+                errorMsg.classList.remove('visible');
+            });
+        }
+
+        // --- Game Logic ---
+        function handleGuess() {
+            const rawGuess = guessInput.value.trim();
+            if (!rawGuess) return;
+            
+            const guessText = rawGuess.toUpperCase();
+
+            if (!allNames.includes(guessText)) {
+                errorMsg.textContent = "FINNS INTE PÅ LISTAN!";
+                errorMsg.classList.add('visible');
+                // Auto hide error after 2 seconds
+                setTimeout(() => errorMsg.classList.remove('visible'), 2000);
+                return;
+            }
+
+            if (guessedNames.includes(guessText)) {
+                errorMsg.textContent = "REDAN GISSAD!";
+                errorMsg.classList.add('visible');
+                // Auto hide error after 2 seconds
+                setTimeout(() => errorMsg.classList.remove('visible'), 2000);
+                return;
+            }
+
+            guessedNames.push(guessText);
+            
+            // Cross it out from the side panel
+            const badges = document.querySelectorAll('.name-badge');
+            badges.forEach(b => {
+                if (b.dataset.name === guessText) {
+                    b.classList.add('guessed');
+                }
+            });
+            
+            // Disable input during animation
+            guessInput.disabled = true;
+            guessBtn.disabled = true;
+
+            const correctIndex = top15.findIndex(item => item.name.toUpperCase() === guessText);
+            const isCorrect = correctIndex !== -1;
+
+            animateGuess(guessText, isCorrect, correctIndex);
+        }
+
+        function animateGuess(guessText, isCorrect, correctIndex) {
+            // Hide keyboard on mobile
+            guessInput.blur();
+
+            // Create animated element
+            const animEl = document.createElement('div');
+            animEl.className = 'animating-guess';
+            animEl.textContent = guessText;
+            document.body.appendChild(animEl);
+
+            // Set initial position below the screen
+            const startSlot = document.getElementById('slot-14');
+            const startRect = startSlot.getBoundingClientRect();
+            animEl.style.width = `${startRect.width}px`;
+            animEl.style.top = `${window.scrollY + window.innerHeight + 50}px`;
+
+            // Trigger reflow
+            void animEl.offsetWidth;
+
+            let currentStep = 14; // Start at the bottom slot (index 14)
+            const finalTarget = isCorrect ? correctIndex : -1;
+
+            function step() {
+                if (currentStep > finalTarget && currentStep >= 0) {
+                    const targetSlot = document.getElementById(`slot-${currentStep}`);
+                    const targetRect = targetSlot.getBoundingClientRect();
+                    
+                    animEl.style.width = `${targetRect.width}px`;
+                    animEl.style.top = `${targetRect.top + window.scrollY}px`;
+                    
+                    // Small highlight effect on the slot it passes
+                    const originalBg = targetSlot.style.background;
+                    targetSlot.style.background = 'rgba(0, 243, 255, 0.15)';
+                    setTimeout(() => {
+                        targetSlot.style.background = originalBg;
+                    }, 250);
+
+                    currentStep--;
+                    setTimeout(step, 400); // Slower animation: 400ms per step
+
+                } else if (currentStep === finalTarget && isCorrect) {
+                    // Reached the correct slot
+                    const targetSlot = document.getElementById(`slot-${correctIndex}`);
+                    const targetRect = targetSlot.getBoundingClientRect();
+                    animEl.style.width = `${targetRect.width}px`;
+                    animEl.style.top = `${targetRect.top + window.scrollY}px`;
+                    
+                    setTimeout(() => {
+                        animEl.remove();
+                        lockInCorrect(correctIndex);
+                    }, 400);
+
+                } else if (!isCorrect && currentStep < 0) {
+                    // Turn the box red!
+                    animEl.style.background = 'linear-gradient(90deg, #ff3366, #ff0000)';
+                    animEl.style.boxShadow = '0 0 50px #ff3366';
+                    
+                    setTimeout(() => {
+                        // Fly out top
+                        animEl.style.top = `${window.scrollY - 100}px`;
+                        setTimeout(() => {
+                            animEl.remove();
+                            handleWrong();
+                        }, 400);
+                    }, 600); // Hold the red flash for 600ms before flying out
+                }
+            }
+
+            // Start stepping after a tiny delay
+            setTimeout(step, 50);
+        }
+
+        function lockInCorrect(index) {
+            const slot = document.getElementById(`slot-${index}`);
+            const data = top15[index];
+            
+            slot.querySelector('.name').textContent = data.name;
+            slot.querySelector('.count').textContent = data.count;
+            slot.classList.add('correct');
+            
+            // Flash animation
+            slot.classList.add('flash-green');
+            setTimeout(() => slot.classList.remove('flash-green'), 700);
+
+            correctGuesses++;
+            finishTurn();
+        }
+
+        function handleWrong() {
+            lives--;
+            
+            // Red screen flash
+            redOverlay.classList.add('active');
+            setTimeout(() => redOverlay.classList.remove('active'), 600);
+
+            // Break a heart
+            const hearts = document.querySelectorAll('.heart:not(.broken)');
+            if (hearts.length > 0) {
+                hearts[hearts.length - 1].classList.add('broken');
+            }
+
+            finishTurn();
+        }
+
+        function finishTurn() {
+            // Re-enable input
+            guessInput.disabled = false;
+            guessBtn.disabled = false;
+            guessInput.value = '';
+            
+            if (lives <= 0) {
+                setTimeout(showGameOver, 800);
+            } else if (correctGuesses === 15) {
+                setTimeout(showWin, 800);
+            } else {
+                // Focus back on input automatically
+                guessInput.focus();
+            }
+        }
+
+        function showGameOver() {
+            // Reveal missed ones in red
+            top15.forEach((item, index) => {
+                const slot = document.getElementById(`slot-${index}`);
+                if (!slot.classList.contains('correct')) {
+                    slot.querySelector('.name').textContent = item.name;
+                    slot.querySelector('.count').textContent = item.count;
+                    slot.classList.add('missed');
+                }
+            });
+
+            setTimeout(() => {
+                document.getElementById('game-over-overlay').style.display = 'flex';
+            }, 1200);
+        }
+
+        function showWin() {
+            fireConfetti();
+            document.getElementById('win-overlay').style.display = 'flex';
+        }
+
+        // --- Confetti Animation ---
+        function fireConfetti() {
+            const canvas = document.getElementById('confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.display = 'block';
+
+            const particles = [];
+            const colors = ['#bc13fe', '#00f3ff', '#ffd700', '#00ff66', '#ff3366'];
+            
+            for(let i=0; i<200; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    r: Math.random() * 6 + 4,
+                    dx: Math.random() * 4 - 2,
+                    dy: Math.random() * 5 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.floor(Math.random() * 10) - 10,
+                    tiltAngleInc: (Math.random() * 0.07) + 0.05,
+                    tiltAngle: 0
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach(p => {
+                    p.tiltAngle += p.tiltAngleInc;
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    
+                    if (p.y > canvas.height) {
+                        p.y = -20;
+                        p.x = Math.random() * canvas.width;
+                    }
+                    
+                    ctx.beginPath();
+                    ctx.lineWidth = p.r;
+                    ctx.strokeStyle = p.color;
+                    ctx.moveTo(p.x + p.tilt + p.r, p.y);
+                    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+                    ctx.stroke();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // Start
+        initGame();
+
+    </script>
+</body>
+</html>
